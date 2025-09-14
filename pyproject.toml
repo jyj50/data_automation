@@ -6,5 +6,11 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "django>=5.2.6",
+    "kiwi>=10.2.33",
+    "kiwipiepy>=0.21.0",
+    "llvmlite==0.39.1",
+    "notebook>=7.4.5",
+    "numpy>=2.2.6",
+    "pandas>=2.3.2",
     "pillow>=11.3.0",
 ]
