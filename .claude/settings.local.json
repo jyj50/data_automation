@@ -2,8 +2,7 @@
   "permissions": {
     "allow": [
       "Bash(python manage.py startapp:*)",
-      "Bash(python manage.py:*)",
-      "Bash(python test_yolo_conversion.py:*)"
+      "Bash(python manage.py:*)"
     ],
     "deny": [],
     "ask": []
