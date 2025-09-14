@@ -1,0 +1,185 @@
+{% extends 'multimodal/base.html' %}
+
+{% block title %}이미지 처리 - 멀티모달 데이터 전처리 플랫폼{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 2rem; color: #333;">이미지 처리</h1>
+
+<!-- 이미지 업로드 폼 -->
+<div class="card" style="margin-bottom: 2rem;">
+    <h2 class="card-title">이미지 업로드</h2>
+    <form method="post" action="{% url 'multimodal:image_upload' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="title">제목</label>
+            <input type="text" id="title" name="title" placeholder="이미지 제목을 입력하세요" required>
+        </div>
+
+        <div class="form-group">
+            <label for="image_file">이미지 파일</label>
+            <input type="file" id="image_file" name="image_file" accept="image/*" required>
+            <small style="color: #666; font-size: 0.9rem; margin-top: 0.5rem; display: block;">
+                지원 형식: JPG, JPEG, PNG, GIF, BMP (최대 10MB)
+            </small>
+        </div>
+
+        <button type="submit" class="btn btn-primary">업로드 및 처리하기</button>
+    </form>
+</div>
+
+<!-- 업로드된 이미지 목록 -->
+<div class="card">
+    <h2 class="card-title">업로드된 이미지 목록</h2>
+
+    {% if images %}
+        <div class="grid grid-3">
+            {% for image in images %}
+                <div class="card">
+                    <div style="position: relative; margin-bottom: 1rem;">
+                        <img src="{{ image.image_file.url }}"
+                             alt="{{ image.title }}"
+                             style="width: 100%; height: 200px; object-fit: cover; border-radius: 5px;">
+
+                        {% if image.segments.count > 0 %}
+                            <span style="position: absolute; top: 5px; right: 5px;
+                                         background: rgba(102, 126, 234, 0.9);
+                                         color: white; padding: 2px 8px;
+                                         border-radius: 10px; font-size: 0.8rem;">
+                                {{ image.segments.count }}개 세그먼트
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem; color: #333;">{{ image.title }}</h3>
+                    <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
+                        업로드: {{ image.uploaded_at|date:"Y-m-d H:i" }}
+                    </p>
+
+                    {% if image.segments.exists %}
+                        <div style="margin-bottom: 1rem;">
+                            <h4 style="font-size: 0.9rem; color: #667eea; margin-bottom: 0.5rem;">라벨된 객체:</h4>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.3rem;">
+                                {% for segment in image.segments.all|slice:":3" %}
+                                    <span style="background: #e9ecef; padding: 0.2rem 0.5rem;
+                                                 border-radius: 10px; font-size: 0.8rem; color: #495057;">
+                                        {{ segment.label }}
+                                    </span>
+                                {% endfor %}
+                                {% if image.segments.count > 3 %}
+                                    <span style="color: #667eea; font-size: 0.8rem;">+{{ image.segments.count|add:"-3" }}개 더</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <div style="display: flex; gap: 0.5rem;">
+                        <a href="{% url 'multimodal:image_detail' image.id %}"
+                           class="btn btn-primary" style="flex: 1; font-size: 0.9rem;">
+                            {% if image.segments.exists %}편집하기{% else %}라벨링하기{% endif %}
+                        </a>
+                        <button onclick="deleteImage({{ image.id }})"
+                                class="btn btn-secondary" style="font-size: 0.9rem;">
+                            삭제
+                        </button>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- 페이지네이션 (필요시 추가) -->
+        {% if images.count > 12 %}
+            <div style="text-align: center; margin-top: 2rem;">
+                <p style="color: #666;">{{ images.count }}개의 이미지가 있습니다.</p>
+            </div>
+        {% endif %}
+    {% else %}
+        <div style="text-align: center; padding: 3rem 0; color: #666;">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">📷</div>
+            <h3 style="margin-bottom: 1rem;">업로드된 이미지가 없습니다</h3>
+            <p>위의 업로드 폼을 사용하여 첫 번째 이미지를 업로드해보세요.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* 이미지 호버 효과 */
+    .card img {
+        transition: transform 0.3s ease;
+    }
+
+    .card:hover img {
+        transform: scale(1.05);
+    }
+
+    /* 파일 업로드 스타일링 */
+    input[type="file"] {
+        padding: 0.6rem;
+        border: 2px dashed #ddd;
+        background: #f8f9fa;
+        border-radius: 5px;
+    }
+
+    input[type="file"]:hover {
+        border-color: #667eea;
+        background: #f0f4ff;
+    }
+
+    /* 세그먼트 표시 스타일 */
+    .segment-badge {
+        display: inline-block;
+        background: rgba(102, 126, 234, 0.1);
+        color: #667eea;
+        padding: 0.2rem 0.6rem;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        margin: 0.2rem;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function deleteImage(imageId) {
+        if (confirm('정말로 이 이미지를 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.')) {
+            // 실제 구현에서는 Ajax로 삭제 요청을 보내거나
+            // 별도의 삭제 URL로 POST 요청을 보냅니다.
+            alert('삭제 기능은 향후 구현 예정입니다.');
+        }
+    }
+
+    // 파일 선택 시 미리보기 기능
+    document.getElementById('image_file').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                // 기존 미리보기 제거
+                const existingPreview = document.getElementById('image-preview');
+                if (existingPreview) {
+                    existingPreview.remove();
+                }
+
+                // 새 미리보기 생성
+                const preview = document.createElement('div');
+                preview.id = 'image-preview';
+                preview.style.marginTop = '1rem';
+                preview.innerHTML = `
+                    <img src="${e.target.result}"
+                         style="max-width: 200px; max-height: 150px;
+                                object-fit: cover; border-radius: 5px;
+                                border: 1px solid #ddd;">
+                    <p style="font-size: 0.9rem; color: #666; margin-top: 0.5rem;">
+                        미리보기: ${file.name}
+                    </p>
+                `;
+
+                // 파일 입력 필드 다음에 미리보기 추가
+                e.target.parentNode.appendChild(preview);
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+</script>
+{% endblock %}

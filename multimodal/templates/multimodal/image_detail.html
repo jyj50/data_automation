@@ -1,0 +1,297 @@
+{% extends 'multimodal/base.html' %}
+
+{% block title %}{{ image_data.title }} - 이미지 세그먼트 편집{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <h1 style="color: #333; margin-bottom: 0.5rem;">{{ image_data.title }}</h1>
+    <p style="color: #666;">업로드: {{ image_data.uploaded_at|date:"Y-m-d H:i" }}</p>
+    <a href="{% url 'multimodal:image_tab' %}" class="btn btn-secondary" style="margin-top: 1rem;">← 이미지 목록으로</a>
+</div>
+
+<div class="grid grid-2" style="gap: 2rem;">
+    <!-- 이미지 편집 영역 -->
+    <div class="card">
+        <h2 class="card-title">이미지 세그먼트 편집</h2>
+
+        <div style="position: relative; display: inline-block; margin-bottom: 1rem;">
+            <canvas id="imageCanvas"
+                    style="border: 2px solid #ddd; border-radius: 5px; cursor: crosshair; max-width: 100%;">
+            </canvas>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <div class="form-group">
+                <label for="segmentLabel">객체 라벨 (음식 종류)</label>
+                <input type="text" id="segmentLabel" placeholder="예: 피자, 햄버거, 치킨">
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                <button id="clearCanvas" class="btn btn-secondary">지우기</button>
+                <button id="saveSegment" class="btn btn-primary">세그먼트 저장</button>
+            </div>
+
+            <div style="background: #f8f9fa; padding: 1rem; border-radius: 5px;">
+                <h4 style="margin-bottom: 0.5rem; color: #495057;">사용법:</h4>
+                <ol style="margin-left: 1rem; color: #666; font-size: 0.9rem;">
+                    <li>마우스로 드래그하여 객체 주변에 세그먼트를 그립니다</li>
+                    <li>객체 라벨에 음식 종류를 입력합니다</li>
+                    <li>'세그먼트 저장' 버튼을 클릭하여 데이터를 저장합니다</li>
+                    <li>'지우기' 버튼으로 현재 그림을 초기화할 수 있습니다</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <!-- 저장된 세그먼트 목록 -->
+    <div class="card">
+        <h2 class="card-title">저장된 세그먼트 ({{ segments.count }}개)</h2>
+
+        {% if segments %}
+            <div id="segmentsList">
+                {% for segment in segments %}
+                    <div class="card" style="margin-bottom: 1rem; background: #f8f9fa;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h4 style="margin-bottom: 0.5rem; color: #667eea;">{{ segment.label }}</h4>
+                                <p style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                    생성: {{ segment.created_at|date:"Y-m-d H:i" }}
+                                </p>
+                                <p style="color: #888; font-size: 0.8rem;">
+                                    좌표: {{ segment.coordinates|length }}개 점
+                                </p>
+                            </div>
+                            <div>
+                                <button onclick="showSegment({{ segment.id }})"
+                                        class="btn btn-secondary" style="font-size: 0.9rem; margin-right: 0.5rem;">
+                                    표시
+                                </button>
+                                <button onclick="deleteSegment({{ segment.id }})"
+                                        class="btn btn-secondary" style="font-size: 0.9rem;">
+                                    삭제
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div style="text-align: center; padding: 2rem 0; color: #666;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">✏️</div>
+                <p>아직 그려진 세그먼트가 없습니다.</p>
+                <p>왼쪽 이미지에서 마우스로 객체를 그려보세요.</p>
+            </div>
+        {% endif %}
+
+        <!-- 통계 정보 -->
+        <div style="margin-top: 2rem; padding: 1rem; background: white; border-radius: 5px; border: 1px solid #e9ecef;">
+            <h4 style="margin-bottom: 1rem; color: #333;">세그먼트 통계</h4>
+            <div class="grid" style="gap: 1rem;">
+                <div style="text-align: center;">
+                    <div style="font-size: 1.5rem; color: #667eea; font-weight: bold;">{{ segments.count }}</div>
+                    <div style="color: #666; font-size: 0.9rem;">총 세그먼트</div>
+                </div>
+                {% if segments %}
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.5rem; color: #28a745; font-weight: bold;">
+                            {{ segments|length|floatformat:0 }}
+                        </div>
+                        <div style="color: #666; font-size: 0.9rem;">라벨된 객체</div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    #imageCanvas {
+        max-width: 100%;
+        height: auto;
+    }
+
+    .segment-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+    }
+
+    .drawing-mode {
+        cursor: crosshair !important;
+    }
+
+    /* 세그먼트 표시 애니메이션 */
+    @keyframes highlightSegment {
+        0% { background-color: #f8f9fa; }
+        50% { background-color: #e3f2fd; }
+        100% { background-color: #f8f9fa; }
+    }
+
+    .highlight-segment {
+        animation: highlightSegment 1s ease-in-out;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let canvas, ctx;
+    let isDrawing = false;
+    let currentPath = [];
+    let image = new Image();
+
+    // 캔버스 초기화
+    function initCanvas() {
+        canvas = document.getElementById('imageCanvas');
+        ctx = canvas.getContext('2d');
+
+        // 이미지 로드
+        image.src = "{{ image_data.image_file.url }}";
+        image.onload = function() {
+            // 캔버스 크기를 이미지에 맞게 조정
+            const maxWidth = 500;
+            const ratio = Math.min(maxWidth / image.width, maxWidth / image.height);
+
+            canvas.width = image.width * ratio;
+            canvas.height = image.height * ratio;
+
+            // 이미지 그리기
+            ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+        };
+
+        // 마우스 이벤트 리스너
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        // 터치 이벤트 지원
+        canvas.addEventListener('touchstart', handleTouch);
+        canvas.addEventListener('touchmove', handleTouch);
+        canvas.addEventListener('touchend', stopDrawing);
+    }
+
+    function startDrawing(e) {
+        isDrawing = true;
+        currentPath = [];
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        currentPath.push({x: x, y: y});
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+    }
+
+    function draw(e) {
+        if (!isDrawing) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        currentPath.push({x: x, y: y});
+
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#667eea';
+        ctx.lineTo(x, y);
+        ctx.stroke();
+    }
+
+    function stopDrawing() {
+        if (isDrawing) {
+            isDrawing = false;
+            ctx.beginPath();
+        }
+    }
+
+    function handleTouch(e) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent(e.type.replace('touch', 'mouse'), {
+            clientX: touch.clientX,
+            clientY: touch.clientY
+        });
+        canvas.dispatchEvent(mouseEvent);
+    }
+
+    // 캔버스 지우기
+    function clearCanvas() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+        currentPath = [];
+    }
+
+    // 세그먼트 저장
+    async function saveSegment() {
+        const label = document.getElementById('segmentLabel').value.trim();
+
+        if (!label) {
+            alert('객체 라벨을 입력해주세요.');
+            return;
+        }
+
+        if (currentPath.length < 3) {
+            alert('세그먼트를 그려주세요. (최소 3개 점 필요)');
+            return;
+        }
+
+        try {
+            const response = await fetch("{% url 'multimodal:image_segment' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    image_id: {{ image_data.id }},
+                    label: label,
+                    coordinates: currentPath
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert('세그먼트가 저장되었습니다!');
+                document.getElementById('segmentLabel').value = '';
+                clearCanvas();
+                location.reload(); // 페이지 새로고침으로 목록 업데이트
+            } else {
+                alert('저장 중 오류가 발생했습니다: ' + data.error);
+            }
+        } catch (error) {
+            alert('네트워크 오류가 발생했습니다: ' + error.message);
+        }
+    }
+
+    // 세그먼트 표시
+    function showSegment(segmentId) {
+        // 실제 구현에서는 해당 세그먼트의 좌표를 가져와서 캔버스에 표시
+        alert('세그먼트 표시 기능은 향후 구현 예정입니다.');
+
+        // 해당 세그먼트 카드 하이라이트
+        const segmentElements = document.querySelectorAll('[data-segment-id="' + segmentId + '"]');
+        segmentElements.forEach(el => el.classList.add('highlight-segment'));
+    }
+
+    // 세그먼트 삭제
+    function deleteSegment(segmentId) {
+        if (confirm('이 세그먼트를 삭제하시겠습니까?')) {
+            // 실제 구현에서는 Ajax로 삭제 요청
+            alert('삭제 기능은 향후 구현 예정입니다.');
+        }
+    }
+
+    // 버튼 이벤트 리스너
+    document.addEventListener('DOMContentLoaded', function() {
+        initCanvas();
+
+        document.getElementById('clearCanvas').addEventListener('click', clearCanvas);
+        document.getElementById('saveSegment').addEventListener('click', saveSegment);
+    });
+</script>
+{% endblock %}

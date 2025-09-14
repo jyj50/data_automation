@@ -1,0 +1,150 @@
+{% extends 'multimodal/base.html' %}
+
+{% block title %}홈 - 멀티모달 데이터 전처리 플랫폼{% endblock %}
+
+{% block content %}
+<div style="text-align: center; margin-bottom: 3rem;">
+    <h1 style="font-size: 2.5rem; color: #333; margin-bottom: 1rem;">멀티모달 데이터 전처리 & 분석 플랫폼</h1>
+    <p style="font-size: 1.2rem; color: #666; max-width: 600px; margin: 0 auto;">
+        이미지, 텍스트, 음성 데이터를 효율적으로 전처리하고 분석할 수 있는 통합 플랫폼입니다.
+    </p>
+</div>
+
+<!-- 기능 소개 카드 -->
+<div class="grid grid-3" style="margin-bottom: 3rem;">
+    <div class="card" style="text-align: center;">
+        <div style="font-size: 3rem; color: #667eea; margin-bottom: 1rem;">🖼️</div>
+        <h3 class="card-title">이미지 처리</h3>
+        <p style="color: #666; margin-bottom: 1.5rem;">
+            이미지를 업로드하고 직접 세그먼트를 그려 객체를 라벨링할 수 있습니다. 음식 종류 등의 객체 인식을 위한 데이터셋 구축이 가능합니다.
+        </p>
+        <a href="{% url 'multimodal:image_tab' %}" class="btn btn-primary">이미지 처리하기</a>
+    </div>
+
+    <div class="card" style="text-align: center;">
+        <div style="font-size: 3rem; color: #667eea; margin-bottom: 1rem;">📝</div>
+        <h3 class="card-title">텍스트 분석</h3>
+        <p style="color: #666; margin-bottom: 1.5rem;">
+            한국어 텍스트를 Kiwi 라이브러리로 형태소 분석하고 불용어를 제거합니다. 키워드 추출로 텍스트의 핵심 내용을 파악할 수 있습니다.
+        </p>
+        <a href="{% url 'multimodal:text_tab' %}" class="btn btn-primary">텍스트 분석하기</a>
+    </div>
+
+    <div class="card" style="text-align: center;">
+        <div style="font-size: 3rem; color: #667eea; margin-bottom: 1rem;">🎵</div>
+        <h3 class="card-title">음성 변환</h3>
+        <p style="color: #666; margin-bottom: 1.5rem;">
+            OpenAI Whisper 모델을 사용하여 음성 파일을 텍스트로 변환합니다. 변환된 텍스트에서 키워드를 자동으로 추출합니다.
+        </p>
+        <a href="{% url 'multimodal:audio_tab' %}" class="btn btn-primary">음성 변환하기</a>
+    </div>
+</div>
+
+<!-- 최근 처리된 데이터 -->
+<div class="grid grid-2">
+    <div>
+        <h2 style="margin-bottom: 1.5rem; color: #333;">최근 처리된 데이터</h2>
+
+        <!-- 최근 이미지 -->
+        {% if recent_images %}
+            <h3 style="color: #667eea; margin-bottom: 1rem;">최근 이미지</h3>
+            <div class="grid" style="gap: 1rem; margin-bottom: 2rem;">
+                {% for image in recent_images %}
+                    <div class="card">
+                        <h4>{{ image.title }}</h4>
+                        <p style="color: #666; font-size: 0.9rem;">{{ image.uploaded_at|date:"Y-m-d H:i" }}</p>
+                        <a href="{% url 'multimodal:image_detail' image.id %}" class="btn btn-secondary" style="margin-top: 0.5rem;">상세보기</a>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- 최근 텍스트 -->
+        {% if recent_texts %}
+            <h3 style="color: #667eea; margin-bottom: 1rem;">최근 텍스트</h3>
+            <div class="grid" style="gap: 1rem; margin-bottom: 2rem;">
+                {% for text in recent_texts %}
+                    <div class="card">
+                        <h4>{{ text.title }}</h4>
+                        <p style="color: #666; font-size: 0.9rem;">{{ text.created_at|date:"Y-m-d H:i" }}</p>
+                        <p style="color: #888; font-size: 0.8rem; margin-top: 0.5rem;">
+                            키워드: {% for keyword in text.keywords|slice:":3" %}{{ keyword }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                        </p>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- 최근 음성 -->
+        {% if recent_audios %}
+            <h3 style="color: #667eea; margin-bottom: 1rem;">최근 음성</h3>
+            <div class="grid" style="gap: 1rem;">
+                {% for audio in recent_audios %}
+                    <div class="card">
+                        <h4>{{ audio.title }}</h4>
+                        <p style="color: #666; font-size: 0.9rem;">{{ audio.uploaded_at|date:"Y-m-d H:i" }}</p>
+                        <p style="color: #888; font-size: 0.8rem;">
+                            상태:
+                            {% if audio.processing_status == 'completed' %}
+                                <span style="color: #28a745;">완료</span>
+                            {% elif audio.processing_status == 'processing' %}
+                                <span style="color: #ffc107;">처리중</span>
+                            {% elif audio.processing_status == 'error' %}
+                                <span style="color: #dc3545;">오류</span>
+                            {% else %}
+                                <span style="color: #6c757d;">대기</span>
+                            {% endif %}
+                        </p>
+                        <a href="{% url 'multimodal:audio_detail' audio.id %}" class="btn btn-secondary" style="margin-top: 0.5rem;">상세보기</a>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% if not recent_images and not recent_texts and not recent_audios %}
+            <div class="card" style="text-align: center; color: #666;">
+                <p>아직 처리된 데이터가 없습니다. 위의 기능들을 사용해보세요!</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <div>
+        <h2 style="margin-bottom: 1.5rem; color: #333;">시작하기</h2>
+
+        <div class="card">
+            <h3 style="margin-bottom: 1rem;">플랫폼 사용 가이드</h3>
+
+            <div style="margin-bottom: 2rem;">
+                <h4 style="color: #667eea; margin-bottom: 0.5rem;">1. 이미지 처리</h4>
+                <p style="font-size: 0.9rem; color: #666; margin-bottom: 1rem;">
+                    이미지 파일을 업로드하고 마우스로 직접 세그먼트를 그려 음식 종류 등의 객체를 라벨링하세요.
+                </p>
+            </div>
+
+            <div style="margin-bottom: 2rem;">
+                <h4 style="color: #667eea; margin-bottom: 0.5rem;">2. 텍스트 분석</h4>
+                <p style="font-size: 0.9rem; color: #666; margin-bottom: 1rem;">
+                    텍스트를 직접 입력하거나 txt 파일을 업로드하여 형태소 분석과 키워드 추출을 수행하세요.
+                </p>
+            </div>
+
+            <div style="margin-bottom: 2rem;">
+                <h4 style="color: #667eea; margin-bottom: 0.5rem;">3. 음성 변환</h4>
+                <p style="font-size: 0.9rem; color: #666; margin-bottom: 1rem;">
+                    음성 파일을 업로드하면 Whisper 모델이 자동으로 텍스트로 변환하고 키워드를 추출합니다.
+                </p>
+            </div>
+
+            <div style="background: #f8f9fa; padding: 1rem; border-radius: 5px;">
+                <h4 style="color: #495057; margin-bottom: 0.5rem;">주요 특징</h4>
+                <ul style="margin-left: 1rem; color: #666; font-size: 0.9rem;">
+                    <li>실시간 데이터 처리</li>
+                    <li>다양한 파일 형식 지원</li>
+                    <li>처리 결과 데이터베이스 저장</li>
+                    <li>직관적인 사용자 인터페이스</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

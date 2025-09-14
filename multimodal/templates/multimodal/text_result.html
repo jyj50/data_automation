@@ -1,0 +1,332 @@
+{% extends 'multimodal/base.html' %}
+
+{% block title %}{{ text_data.title }} - 텍스트 분석 결과{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <h1 style="color: #333; margin-bottom: 0.5rem;">{{ text_data.title }}</h1>
+    <p style="color: #666;">분석 완료: {{ text_data.created_at|date:"Y-m-d H:i" }}</p>
+    <a href="{% url 'multimodal:text_tab' %}" class="btn btn-secondary" style="margin-top: 1rem;">← 텍스트 분석으로</a>
+</div>
+
+<div class="grid grid-2" style="gap: 2rem;">
+    <!-- 원본 텍스트 -->
+    <div class="card">
+        <h2 class="card-title">원본 텍스트</h2>
+        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 5px;
+                    border-left: 4px solid #6c757d; max-height: 300px; overflow-y: auto;">
+            <p style="line-height: 1.6; margin: 0; white-space: pre-wrap; word-break: break-word;">{{ text_data.original_text }}</p>
+        </div>
+
+        <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center;
+                    padding-top: 1rem; border-top: 1px solid #e9ecef;">
+            <span style="color: #666; font-size: 0.9rem;">
+                <strong>글자 수:</strong> {{ text_data.original_text|length|floatformat:0 }}자
+            </span>
+            <span style="color: #666; font-size: 0.9rem;">
+                <strong>단어 수:</strong> {{ text_data.original_text|wordcount }}개
+            </span>
+        </div>
+    </div>
+
+    <!-- 처리된 텍스트 -->
+    <div class="card">
+        <h2 class="card-title">처리된 텍스트</h2>
+        <div style="background: #e3f2fd; padding: 1.5rem; border-radius: 5px;
+                    border-left: 4px solid #667eea; max-height: 300px; overflow-y: auto;">
+            <p style="line-height: 1.6; margin: 0; word-break: break-word;">{{ text_data.processed_text }}</p>
+        </div>
+
+        <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center;
+                    padding-top: 1rem; border-top: 1px solid #e9ecef;">
+            <span style="color: #666; font-size: 0.9rem;">
+                <strong>처리된 단어:</strong> {{ text_data.processed_text|wordcount }}개
+            </span>
+            <span style="color: #666; font-size: 0.9rem;">
+                <strong>압축률:</strong>
+                {% widthRatio text_data.processed_text|length text_data.original_text|length 100 as compression_ratio %}
+                {{ compression_ratio|floatformat:1 }}%
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- 분석 결과 -->
+<div class="grid grid-2" style="gap: 2rem; margin-top: 2rem;">
+    <!-- 키워드 분석 -->
+    <div class="card">
+        <h2 class="card-title">추출된 키워드 ({{ text_data.keywords|length }}개)</h2>
+
+        {% if text_data.keywords %}
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 2rem;">
+                {% for keyword in text_data.keywords %}
+                    <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                 color: white; padding: 0.5rem 1rem; border-radius: 20px;
+                                 font-size: 0.9rem; font-weight: 500;">
+                        {{ keyword }}
+                    </span>
+                {% endfor %}
+            </div>
+
+            <!-- 키워드 클라우드 (간단한 크기 변화) -->
+            <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 5px; text-align: center;">
+                <h3 style="margin-bottom: 1rem; color: #495057;">키워드 클라우드</h3>
+                <div style="line-height: 2;">
+                    {% for keyword in text_data.keywords|slice:":10" %}
+                        <span style="display: inline-block; margin: 0.3rem;
+                                     font-size: {% cycle '1.2rem' '1.5rem' '1rem' '1.3rem' '1.1rem' %};
+                                     color: {% cycle '#667eea' '#764ba2' '#28a745' '#dc3545' '#ffc107' '#17a2b8' %};
+                                     font-weight: 500;">
+                            {{ keyword }}
+                        </span>
+                    {% endfor %}
+                </div>
+            </div>
+        {% else %}
+            <div style="text-align: center; padding: 2rem 0; color: #666;">
+                <p>키워드가 추출되지 않았습니다.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- 형태소 분석 결과 -->
+    <div class="card">
+        <h2 class="card-title">형태소 분석 결과 ({{ text_data.morphemes|length }}개)</h2>
+
+        {% if text_data.morphemes %}
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                    <thead>
+                        <tr style="background: #f8f9fa; border-bottom: 2px solid #e9ecef;">
+                            <th style="padding: 0.8rem; text-align: left; border-bottom: 1px solid #dee2e6;">단어</th>
+                            <th style="padding: 0.8rem; text-align: left; border-bottom: 1px solid #dee2e6;">품사</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for morpheme in text_data.morphemes|slice:":20" %}
+                            <tr style="border-bottom: 1px solid #e9ecef;">
+                                <td style="padding: 0.6rem;">{{ morpheme.word }}</td>
+                                <td style="padding: 0.6rem;">
+                                    <span style="background: #e9ecef; padding: 0.2rem 0.5rem;
+                                                 border-radius: 10px; font-size: 0.8rem;">
+                                        {{ morpheme.pos }}
+                                    </span>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        {% if text_data.morphemes|length > 20 %}
+                            <tr>
+                                <td colspan="2" style="padding: 1rem; text-align: center; color: #666;">
+                                    그 외 {{ text_data.morphemes|length|add:"-20" }}개 형태소...
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 품사별 통계 -->
+            <div style="margin-top: 2rem; padding: 1rem; background: #f8f9fa; border-radius: 5px;">
+                <h4 style="margin-bottom: 1rem; color: #495057;">품사별 분포</h4>
+                <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
+                    {% comment %} 실제 구현에서는 Python에서 품사별 카운트를 계산해서 전달 {% endcomment %}
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.2rem; color: #667eea; font-weight: bold;">
+                            {% comment %} 명사 개수 {% endcomment %} --
+                        </div>
+                        <div style="color: #666; font-size: 0.9rem;">명사</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.2rem; color: #28a745; font-weight: bold;">
+                            {% comment %} 동사 개수 {% endcomment %} --
+                        </div>
+                        <div style="color: #666; font-size: 0.9rem;">동사</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.2rem; color: #ffc107; font-weight: bold;">
+                            {% comment %} 형용사 개수 {% endcomment %} --
+                        </div>
+                        <div style="color: #666; font-size: 0.9rem;">형용사</div>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div style="text-align: center; padding: 2rem 0; color: #666;">
+                <p>형태소 분석 결과가 없습니다.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 분석 요약 -->
+<div class="card" style="margin-top: 2rem;">
+    <h2 class="card-title">분석 요약</h2>
+
+    <div class="grid grid-3" style="gap: 2rem;">
+        <div style="text-align: center; padding: 1rem; background: #e3f2fd; border-radius: 8px;">
+            <div style="font-size: 2rem; color: #667eea; margin-bottom: 0.5rem;">📊</div>
+            <div style="font-size: 1.5rem; color: #333; font-weight: bold; margin-bottom: 0.3rem;">
+                {{ text_data.keywords|length }}개
+            </div>
+            <div style="color: #666; font-size: 0.9rem;">추출된 키워드</div>
+        </div>
+
+        <div style="text-align: center; padding: 1rem; background: #e8f5e8; border-radius: 8px;">
+            <div style="font-size: 2rem; color: #28a745; margin-bottom: 0.5rem;">🔍</div>
+            <div style="font-size: 1.5rem; color: #333; font-weight: bold; margin-bottom: 0.3rem;">
+                {{ text_data.morphemes|length }}개
+            </div>
+            <div style="color: #666; font-size: 0.9rem;">형태소</div>
+        </div>
+
+        <div style="text-align: center; padding: 1rem; background: #fff3cd; border-radius: 8px;">
+            <div style="font-size: 2rem; color: #ffc107; margin-bottom: 0.5rem;">⏱️</div>
+            <div style="font-size: 1.5rem; color: #333; font-weight: bold; margin-bottom: 0.3rem;">
+                완료
+            </div>
+            <div style="color: #666; font-size: 0.9rem;">처리 상태</div>
+        </div>
+    </div>
+
+    <div style="margin-top: 2rem; padding: 1rem; background: #f8f9fa; border-radius: 5px;">
+        <h4 style="margin-bottom: 1rem; color: #495057;">처리 정보</h4>
+        <div class="grid grid-2" style="gap: 2rem;">
+            <div>
+                <p style="margin-bottom: 0.5rem;"><strong>처리 방법:</strong> Kiwi 형태소 분석기</p>
+                <p style="margin-bottom: 0.5rem;"><strong>불용어 제거:</strong> 적용됨</p>
+                <p style="margin-bottom: 0.5rem;"><strong>키워드 추출:</strong> 빈도 기반</p>
+            </div>
+            <div>
+                <p style="margin-bottom: 0.5rem;"><strong>원본 텍스트 길이:</strong> {{ text_data.original_text|length }} 자</p>
+                <p style="margin-bottom: 0.5rem;"><strong>처리 시간:</strong> {{ text_data.created_at|date:"Y-m-d H:i:s" }}</p>
+                <p style="margin-bottom: 0.5rem;"><strong>저장 상태:</strong> 데이터베이스 저장 완료</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 액션 버튼 -->
+<div style="text-align: center; margin-top: 3rem;">
+    <a href="{% url 'multimodal:text_tab' %}" class="btn btn-primary" style="margin-right: 1rem;">
+        새로운 텍스트 분석
+    </a>
+    <button onclick="exportResults()" class="btn btn-secondary" style="margin-right: 1rem;">
+        결과 내보내기
+    </button>
+    <button onclick="shareResults()" class="btn btn-secondary">
+        결과 공유
+    </button>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* 키워드 애니메이션 */
+    @keyframes keywordFloat {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-3px); }
+    }
+
+    .keyword-tag {
+        animation: keywordFloat 3s ease-in-out infinite;
+        animation-delay: var(--delay, 0s);
+    }
+
+    /* 테이블 스타일링 */
+    table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    /* 스크롤바 스타일링 */
+    .scrollable {
+        scrollbar-width: thin;
+        scrollbar-color: #667eea #f1f1f1;
+    }
+
+    .scrollable::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .scrollable::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+
+    .scrollable::-webkit-scrollbar-thumb {
+        background: #667eea;
+        border-radius: 3px;
+    }
+
+    .scrollable::-webkit-scrollbar-thumb:hover {
+        background: #5a67d8;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 결과 내보내기
+    function exportResults() {
+        const textData = {
+            title: "{{ text_data.title|escapejs }}",
+            original_text: "{{ text_data.original_text|escapejs }}",
+            processed_text: "{{ text_data.processed_text|escapejs }}",
+            keywords: {{ text_data.keywords|safe }},
+            morphemes: {{ text_data.morphemes|safe }},
+            created_at: "{{ text_data.created_at|date:'Y-m-d H:i:s' }}"
+        };
+
+        const dataStr = JSON.stringify(textData, null, 2);
+        const dataBlob = new Blob([dataStr], {type: 'application/json'});
+        const url = URL.createObjectURL(dataBlob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `text_analysis_${textData.title.replace(/[^a-zA-Z0-9가-힣]/g, '_')}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    // 결과 공유
+    function shareResults() {
+        const shareText = `텍스트 분석 결과\n제목: {{ text_data.title }}\n키워드: {{ text_data.keywords|join:", " }}\n\n멀티모달 데이터 플랫폼에서 분석됨`;
+
+        if (navigator.share) {
+            navigator.share({
+                title: '텍스트 분석 결과',
+                text: shareText
+            }).catch(err => console.log('공유 실패:', err));
+        } else {
+            // 클립보드에 복사
+            navigator.clipboard.writeText(shareText).then(() => {
+                alert('분석 결과가 클립보드에 복사되었습니다!');
+            }).catch(() => {
+                alert('클립보드 복사에 실패했습니다.');
+            });
+        }
+    }
+
+    // 키워드 애니메이션 딜레이 설정
+    document.addEventListener('DOMContentLoaded', function() {
+        const keywords = document.querySelectorAll('.keyword-tag');
+        keywords.forEach((keyword, index) => {
+            keyword.style.setProperty('--delay', `${index * 0.1}s`);
+        });
+
+        // 스크롤 가능한 영역에 클래스 추가
+        const scrollableElements = document.querySelectorAll('[style*="overflow-y: auto"]');
+        scrollableElements.forEach(el => el.classList.add('scrollable'));
+    });
+
+    // 키워드 클릭 이벤트
+    document.querySelectorAll('.keyword-tag').forEach(keyword => {
+        keyword.addEventListener('click', function() {
+            const text = this.textContent.trim();
+            // 해당 키워드로 추가 검색이나 필터링 수행
+            console.log('선택된 키워드:', text);
+        });
+    });
+</script>
+{% endblock %}

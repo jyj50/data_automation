@@ -1,0 +1,440 @@
+{% extends 'multimodal/base.html' %}
+
+{% block title %}음성 변환 - 멀티모달 데이터 전처리 플랫폼{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 2rem; color: #333;">음성 변환</h1>
+
+<div class="grid grid-2" style="gap: 2rem;">
+    <!-- 음성 파일 업로드 -->
+    <div>
+        <div class="card">
+            <h2 class="card-title">음성 파일 업로드</h2>
+            <form method="post" action="{% url 'multimodal:audio_upload' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="title">제목</label>
+                    <input type="text" id="title" name="title" placeholder="음성 파일 제목을 입력하세요" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="audio_file">음성 파일</label>
+                    <input type="file" id="audio_file" name="audio_file" accept="audio/*" required>
+                    <small style="color: #666; font-size: 0.9rem; margin-top: 0.5rem; display: block;">
+                        지원 형식: MP3, WAV, M4A, FLAC, OGG (최대 50MB)
+                    </small>
+                </div>
+
+                <button type="submit" class="btn btn-primary">업로드 및 변환 시작</button>
+            </form>
+        </div>
+
+        <!-- 처리 상태 알림 -->
+        <div class="card" style="margin-top: 2rem; background: #e3f2fd;">
+            <h3 style="color: #1565c0; margin-bottom: 1rem;">처리 과정 안내</h3>
+            <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                <div style="width: 30px; height: 30px; background: #667eea; color: white;
+                            border-radius: 50%; display: flex; align-items: center;
+                            justify-content: center; margin-right: 1rem; font-size: 0.8rem; font-weight: bold;">1</div>
+                <div style="color: #333;">음성 파일 업로드 및 검증</div>
+            </div>
+
+            <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                <div style="width: 30px; height: 30px; background: #667eea; color: white;
+                            border-radius: 50%; display: flex; align-items: center;
+                            justify-content: center; margin-right: 1rem; font-size: 0.8rem; font-weight: bold;">2</div>
+                <div style="color: #333;">OpenAI Whisper 모델로 음성-텍스트 변환</div>
+            </div>
+
+            <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                <div style="width: 30px; height: 30px; background: #667eea; color: white;
+                            border-radius: 50%; display: flex; align-items: center;
+                            justify-content: center; margin-right: 1rem; font-size: 0.8rem; font-weight: bold;">3</div>
+                <div style="color: #333;">변환된 텍스트에서 키워드 자동 추출</div>
+            </div>
+
+            <div style="display: flex; align-items: center;">
+                <div style="width: 30px; height: 30px; background: #667eea; color: white;
+                            border-radius: 50%; display: flex; align-items: center;
+                            justify-content: center; margin-right: 1rem; font-size: 0.8rem; font-weight: bold;">4</div>
+                <div style="color: #333;">결과 저장 및 상세 분석 제공</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 기능 설명 -->
+    <div>
+        <div class="card">
+            <h2 class="card-title">음성 변환 기능</h2>
+
+            <div style="margin-bottom: 2rem;">
+                <h4 style="color: #667eea; margin-bottom: 1rem;">🎤 OpenAI Whisper</h4>
+                <p style="color: #666; line-height: 1.6; margin-bottom: 1rem;">
+                    최신 AI 기술인 OpenAI의 Whisper 모델을 사용하여 높은 정확도로 음성을 텍스트로 변환합니다.
+                    다양한 언어와 억양을 지원하며, 잡음이 있는 환경에서도 우수한 성능을 보입니다.
+                </p>
+            </div>
+
+            <div style="margin-bottom: 2rem;">
+                <h4 style="color: #667eea; margin-bottom: 1rem;">📊 키워드 분석</h4>
+                <p style="color: #666; line-height: 1.6; margin-bottom: 1rem;">
+                    변환된 텍스트에서 핵심 키워드를 자동으로 추출합니다.
+                    한국어 형태소 분석을 통해 의미 있는 단어들을 식별하고 중요도에 따라 정렬합니다.
+                </p>
+            </div>
+
+            <div style="background: #f8f9fa; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;">
+                <h4 style="color: #495057; margin-bottom: 0.5rem;">지원 기능</h4>
+                <ul style="margin-left: 1rem; color: #666; font-size: 0.9rem;">
+                    <li>실시간 음성-텍스트 변환</li>
+                    <li>다양한 오디오 포맷 지원</li>
+                    <li>자동 키워드 추출</li>
+                    <li>처리 진행상황 실시간 표시</li>
+                    <li>결과 데이터베이스 저장</li>
+                </ul>
+            </div>
+
+            <div style="background: #fff3cd; padding: 1rem; border-radius: 5px;">
+                <h4 style="color: #856404; margin-bottom: 0.5rem;">⚠️ 주의사항</h4>
+                <ul style="margin-left: 1rem; color: #856404; font-size: 0.9rem;">
+                    <li>처리 시간은 파일 크기와 길이에 따라 달라집니다</li>
+                    <li>처음 사용 시 Whisper 모델 다운로드가 필요할 수 있습니다</li>
+                    <li>네트워크가 불안정한 경우 처리가 지연될 수 있습니다</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 샘플 파일 안내 -->
+        <div class="card" style="margin-top: 2rem;">
+            <h3 class="card-title">샘플 테스트</h3>
+            <p style="color: #666; margin-bottom: 1rem;">
+                음성 변환 기능을 테스트해보고 싶으시다면, 짧은 음성 파일(1-2분)로 시작해보세요.
+            </p>
+
+            <div style="background: #e8f5e8; padding: 1rem; border-radius: 5px;">
+                <h4 style="color: #155724; margin-bottom: 0.5rem;">권장 테스트 파일</h4>
+                <ul style="margin-left: 1rem; color: #155724; font-size: 0.9rem;">
+                    <li>명확한 발음의 한국어 음성</li>
+                    <li>배경 잡음이 적은 녹음</li>
+                    <li>1-5분 길이의 파일</li>
+                    <li>WAV 또는 MP3 형식</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 처리된 음성 파일 목록 -->
+<div class="card" style="margin-top: 3rem;">
+    <h2 class="card-title">처리된 음성 파일 목록</h2>
+
+    {% if audios %}
+        <div class="grid grid-3">
+            {% for audio in audios %}
+                <div class="card">
+                    <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                        <div style="font-size: 2rem; margin-right: 1rem;">
+                            {% if audio.processing_status == 'completed' %}🎵
+                            {% elif audio.processing_status == 'processing' %}⏳
+                            {% elif audio.processing_status == 'error' %}❌
+                            {% else %}⏸️{% endif %}
+                        </div>
+                        <div style="flex: 1;">
+                            <h3 style="font-size: 1.1rem; margin-bottom: 0.3rem; color: #333;">{{ audio.title }}</h3>
+                            <p style="color: #666; font-size: 0.8rem;">{{ audio.uploaded_at|date:"Y-m-d H:i" }}</p>
+                        </div>
+                    </div>
+
+                    <!-- 처리 상태 -->
+                    <div style="margin-bottom: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <span style="font-size: 0.9rem; color: #666;">상태:</span>
+                            <span style="padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.8rem;
+                                         {% if audio.processing_status == 'completed' %}background: #d4edda; color: #155724;
+                                         {% elif audio.processing_status == 'processing' %}background: #fff3cd; color: #856404;
+                                         {% elif audio.processing_status == 'error' %}background: #f8d7da; color: #721c24;
+                                         {% else %}background: #e9ecef; color: #6c757d;{% endif %}">
+                                {% if audio.processing_status == 'completed' %}완료
+                                {% elif audio.processing_status == 'processing' %}처리중
+                                {% elif audio.processing_status == 'error' %}오류
+                                {% else %}대기{% endif %}
+                            </span>
+                        </div>
+
+                        <!-- 진행 바 (처리중인 경우) -->
+                        {% if audio.processing_status == 'processing' %}
+                            <div style="background: #e9ecef; height: 4px; border-radius: 2px; margin-bottom: 0.5rem;">
+                                <div style="background: #667eea; height: 4px; border-radius: 2px; width: 60%;
+                                           animation: pulse 2s infinite;"></div>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- 결과 미리보기 -->
+                    {% if audio.processing_status == 'completed' and audio.extracted_keywords %}
+                        <div style="margin-bottom: 1rem;">
+                            <h4 style="font-size: 0.9rem; color: #667eea; margin-bottom: 0.5rem;">추출된 키워드:</h4>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.3rem;">
+                                {% for keyword in audio.extracted_keywords|slice:":3" %}
+                                    <span style="background: #e9ecef; padding: 0.2rem 0.5rem;
+                                                 border-radius: 10px; font-size: 0.8rem; color: #495057;">
+                                        {{ keyword }}
+                                    </span>
+                                {% endfor %}
+                                {% if audio.extracted_keywords|length > 3 %}
+                                    <span style="color: #667eea; font-size: 0.8rem;">+{{ audio.extracted_keywords|length|add:"-3" }}개 더</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {% if audio.processing_status == 'completed' and audio.transcribed_text %}
+                        <div style="margin-bottom: 1rem; color: #666; font-size: 0.9rem;">
+                            <p style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+                                      overflow: hidden; margin: 0;">
+                                {{ audio.transcribed_text|truncatechars:80 }}
+                            </p>
+                        </div>
+                    {% endif %}
+
+                    <!-- 액션 버튼 -->
+                    <div style="display: flex; gap: 0.5rem;">
+                        {% if audio.processing_status == 'completed' %}
+                            <a href="{% url 'multimodal:audio_detail' audio.id %}"
+                               class="btn btn-primary" style="flex: 1; font-size: 0.9rem;">
+                                결과 보기
+                            </a>
+                        {% elif audio.processing_status == 'processing' %}
+                            <button onclick="refreshStatus({{ audio.id }})"
+                                    class="btn btn-secondary" style="flex: 1; font-size: 0.9rem;">
+                                상태 확인
+                            </button>
+                        {% elif audio.processing_status == 'error' %}
+                            <button onclick="retryProcessing({{ audio.id }})"
+                                    class="btn btn-primary" style="flex: 1; font-size: 0.9rem;">
+                                다시 시도
+                            </button>
+                        {% else %}
+                            <span style="flex: 1; text-align: center; color: #666; font-size: 0.9rem;">대기 중...</span>
+                        {% endif %}
+
+                        <button onclick="deleteAudio({{ audio.id }})"
+                                class="btn btn-secondary" style="font-size: 0.9rem;">
+                            삭제
+                        </button>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        {% if audios.count > 9 %}
+            <div style="text-align: center; margin-top: 2rem;">
+                <p style="color: #666;">{{ audios.count }}개의 음성 파일이 있습니다.</p>
+            </div>
+        {% endif %}
+    {% else %}
+        <div style="text-align: center; padding: 3rem 0; color: #666;">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">🎤</div>
+            <h3 style="margin-bottom: 1rem;">처리된 음성 파일이 없습니다</h3>
+            <p>위의 업로드 폼을 사용하여 첫 번째 음성 파일을 변환해보세요.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* 파일 업로드 스타일링 */
+    input[type="file"] {
+        padding: 0.6rem;
+        border: 2px dashed #ddd;
+        background: #f8f9fa;
+        border-radius: 5px;
+    }
+
+    input[type="file"]:hover {
+        border-color: #667eea;
+        background: #f0f4ff;
+    }
+
+    /* 진행 바 애니메이션 */
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+
+    /* 상태 배지 애니메이션 */
+    @keyframes processing {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+
+    .processing-badge {
+        animation: processing 2s ease-in-out infinite;
+    }
+
+    /* 카드 호버 효과 */
+    .audio-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .audio-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+
+    /* 오디오 파형 시각화 (장식용) */
+    .audio-wave {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        height: 20px;
+        margin: 0.5rem 0;
+    }
+
+    .audio-wave span {
+        display: block;
+        width: 3px;
+        background: #667eea;
+        border-radius: 2px;
+        animation: wave 1.5s ease-in-out infinite;
+    }
+
+    .audio-wave span:nth-child(2) { animation-delay: 0.1s; height: 10px; }
+    .audio-wave span:nth-child(3) { animation-delay: 0.2s; height: 15px; }
+    .audio-wave span:nth-child(4) { animation-delay: 0.3s; height: 8px; }
+    .audio-wave span:nth-child(5) { animation-delay: 0.4s; height: 12px; }
+
+    @keyframes wave {
+        0%, 100% { height: 8px; }
+        50% { height: 20px; }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 상태 새로고침
+    function refreshStatus(audioId) {
+        location.reload();
+    }
+
+    // 처리 재시도
+    function retryProcessing(audioId) {
+        if (confirm('음성 변환을 다시 시도하시겠습니까?')) {
+            // 실제 구현에서는 Ajax로 재처리 요청
+            alert('재처리 기능은 향후 구현 예정입니다.');
+        }
+    }
+
+    // 오디오 파일 삭제
+    function deleteAudio(audioId) {
+        if (confirm('정말로 이 음성 파일을 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.')) {
+            // 실제 구현에서는 Ajax로 삭제 요청
+            alert('삭제 기능은 향후 구현 예정입니다.');
+        }
+    }
+
+    // 파일 선택 시 정보 표시
+    document.getElementById('audio_file').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            // 기존 정보 제거
+            const existingInfo = document.getElementById('audio-file-info');
+            if (existingInfo) {
+                existingInfo.remove();
+            }
+
+            // 파일 정보 생성
+            const fileInfo = document.createElement('div');
+            fileInfo.id = 'audio-file-info';
+            fileInfo.style.marginTop = '1rem';
+            fileInfo.style.padding = '1rem';
+            fileInfo.style.background = '#f8f9fa';
+            fileInfo.style.borderRadius = '5px';
+            fileInfo.style.border = '1px solid #e9ecef';
+
+            const duration = await getAudioDuration(file);
+            const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+
+            fileInfo.innerHTML = `
+                <h4 style="margin-bottom: 0.5rem; color: #333;">선택된 파일 정보</h4>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span><strong>파일명:</strong> ${file.name}</span>
+                    <span><strong>크기:</strong> ${sizeInMB} MB</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span><strong>형식:</strong> ${file.type || '알 수 없음'}</span>
+                    <span><strong>예상 처리 시간:</strong> ${getEstimatedTime(sizeInMB)}</span>
+                </div>
+                <div class="audio-wave" style="margin-top: 1rem;">
+                    <span></span><span></span><span></span><span></span><span></span>
+                    <span style="margin-left: 1rem; font-size: 0.9rem; color: #666;">음성 파일이 선택되었습니다</span>
+                </div>
+            `;
+
+            e.target.parentNode.appendChild(fileInfo);
+        }
+    });
+
+    // 오디오 파일 길이 가져오기
+    function getAudioDuration(file) {
+        return new Promise((resolve) => {
+            const audio = document.createElement('audio');
+            audio.preload = 'metadata';
+
+            audio.onloadedmetadata = function() {
+                window.URL.revokeObjectURL(audio.src);
+                const duration = audio.duration;
+                resolve(formatTime(duration));
+            };
+
+            audio.onerror = function() {
+                resolve('알 수 없음');
+            };
+
+            audio.src = URL.createObjectURL(file);
+        });
+    }
+
+    // 시간 포맷팅
+    function formatTime(seconds) {
+        if (!seconds || isNaN(seconds)) return '알 수 없음';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // 예상 처리 시간 계산
+    function getEstimatedTime(sizeInMB) {
+        const timePerMB = 30; // 1MB당 약 30초
+        const estimatedSeconds = sizeInMB * timePerMB;
+
+        if (estimatedSeconds < 60) {
+            return `약 ${Math.ceil(estimatedSeconds)}초`;
+        } else {
+            const mins = Math.ceil(estimatedSeconds / 60);
+            return `약 ${mins}분`;
+        }
+    }
+
+    // 처리중인 파일들의 상태를 주기적으로 확인
+    document.addEventListener('DOMContentLoaded', function() {
+        const processingCards = document.querySelectorAll('[data-status="processing"]');
+        if (processingCards.length > 0) {
+            // 10초마다 페이지 새로고침으로 상태 확인
+            setTimeout(() => {
+                location.reload();
+            }, 10000);
+        }
+
+        // 처리중 배지에 애니메이션 추가
+        const processingBadges = document.querySelectorAll('.processing-badge');
+        processingBadges.forEach(badge => {
+            badge.classList.add('processing-badge');
+        });
+    });
+</script>
+{% endblock %}
