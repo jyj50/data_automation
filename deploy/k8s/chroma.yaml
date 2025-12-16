@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: chroma
+  namespace: rag-app
+spec:
+  selector:
+    app: chroma
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: chroma
+  namespace: rag-app
+spec:
+  serviceName: chroma
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chroma
+  template:
+    metadata:
+      labels:
+        app: chroma
+    spec:
+      containers:
+        - name: chroma
+          image: ghcr.io/chroma-core/chroma:0.5.5
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: CHROMA_SERVER_HOST
+              value: "0.0.0.0"
+            - name: CHROMA_SERVER_HTTP_PORT
+              value: "8000"
+            - name: CHROMA_DB_IMPL
+              value: "duckdb+parquet"
+            - name: PERSIST_DIRECTORY
+              value: "/chroma/data"
+            - name: ANONYMIZED_TELEMETRY
+              value: "False"
+          volumeMounts:
+            - name: chroma-data
+              mountPath: /chroma/data
+          readinessProbe:
+            httpGet:
+              path: /api/v1/heartbeat
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 2
+          livenessProbe:
+            httpGet:
+              path: /api/v1/heartbeat
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 2
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+  volumeClaimTemplates:
+    - metadata:
+        name: chroma-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
+        storageClassName: local-path

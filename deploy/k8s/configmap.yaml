@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rag-config
+  namespace: rag-app
+data:
+  DEBUG: "false"
+  ALLOWED_HOSTS: "rag.example.com"
+  CSRF_TRUSTED_ORIGINS: "https://rag.example.com"
+  MEDIA_ROOT: "/app/media"
+  STATIC_ROOT: "/app/staticfiles"
+  SQLITE_PATH: "/data/db.sqlite3"
+  DOCUMENT_CHUNK_SIZE: "1000"
+  DOCUMENT_CHUNK_OVERLAP: "100"
+  EMBEDDING_PROVIDER: "none"
+  EMBEDDING_MODEL_NAME: "BAAI/bge-m3"
+  VECTOR_DB_PROVIDER: "chroma"
+  CHROMA_URL: "http://chroma.rag-app.svc.cluster.local:8000"
+  CHROMA_COLLECTION: "documents"
+  LLM_PROVIDER: "openai_compat"
+  LLM_BASE_URL: "http://external-llm.example.com"
+  LLM_MODEL: "Qwen2.5-7B-Instruct"
+  LLM_TIMEOUT_SECONDS: "30"

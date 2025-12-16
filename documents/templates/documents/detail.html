@@ -1,0 +1,224 @@
+{% extends "documents/base.html" %}
+{% block content %}
+<div class="card" style="margin-bottom:16px;">
+  <div class="section-title">문서</div>
+  <h2>{{ document.original_filename }}</h2>
+  <div class="flex">
+    <span class="pill status-{{ document.status }}">ingest: {{ document.status }}</span>
+    <span class="pill status-{{ document.parse_status }}">parse: {{ document.parse_status }}</span>
+    <span class="pill status-{{ document.upsert_status }}">upsert: {{ document.upsert_status }}</span>
+    <span class="pill status-{{ document.question_gen_status }}">Q: {{ document.question_gen_status }}</span>
+  </div>
+  <p class="muted">생성: {{ document.created_at|date:"Y-m-d H:i" }}{% if document.processed_at %} · 처리: {{ document.processed_at|date:"Y-m-d H:i" }}{% endif %}</p>
+  <p class="muted">페이지: {{ document.page_count }}</p>
+  {% if document.error_message %}
+    <div class="message error">{{ document.error_message }}</div>
+  {% endif %}
+  <a href="{% url 'documents:home' %}" style="color:var(--accent);text-decoration:none;font-weight:600;">← 목록으로</a>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <div class="section-title">STEP B · 페이지 선택 + 미리보기</div>
+    <div class="flex">
+      <div style="flex:1;">
+        <label>시작 페이지</label>
+        <input type="number" id="page_start" min="1" value="{{ document.selected_page_start|default:1 }}">
+      </div>
+      <div style="flex:1;">
+        <label>종료 페이지</label>
+        <input type="number" id="page_end" min="1" value="{{ document.selected_page_end|default:document.page_count }}">
+      </div>
+      <div style="align-self:flex-end;">
+        <button class="secondary" id="btn-refresh-pages">미리보기 새로고침</button>
+      </div>
+    </div>
+    <div id="page-buttons" class="flex" style="margin-top:12px; flex-wrap:wrap; max-height:160px; overflow:auto;">
+      {% for page in pages %}
+        <button type="button" class="secondary page-btn" data-preview="{{ page.preview_url }}" data-page="{{ page.page_number }}">p{{ page.page_number }}</button>
+      {% endfor %}
+    </div>
+    <div style="margin-top:12px;">
+      <div class="section-title">미리보기</div>
+      <img id="page-preview" src="" alt="preview" style="width:100%;max-height:480px;object-fit:contain;border:1px solid var(--border);border-radius:12px; background:#0b1220;" />
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">STEP C · 파싱 실행</div>
+    <h2>장/절/조 구조화</h2>
+    <label for="mode">모드</label>
+    <select id="mode">
+      <option value="hybrid">하이브리드 (regex + LLM)</option>
+      <option value="regex">regex only</option>
+      <option value="llm">LLM only</option>
+    </select>
+    <div class="flex" style="margin-top:8px;">
+      <label><input type="checkbox" id="force_reparse" /> 강제 재파싱</label>
+    </div>
+    <button id="btn-parse">선택 범위 파싱</button>
+    <div id="parse-result" class="muted" style="margin-top:8px;"></div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px;">
+  <div class="section-title">STEP D · Article 편집</div>
+  <h2>조 단위 결과</h2>
+  <div style="margin-bottom:12px;">
+    <button id="btn-save-all" class="secondary">모든 Article 저장</button>
+    <span class="muted" style="margin-left:8px;">편집 후 한번에 저장됩니다.</span>
+  </div>
+  <div id="articles">
+    {% for art in articles %}
+      <div class="doc-row article-block" data-article-id="{{ art.id }}">
+        <div class="flex" style="justify-content:space-between;">
+          <div><strong>{{ art.article_key }}</strong> · <span class="muted">{{ art.chapter_title }}</span> / <span class="muted">{{ art.section_title }}</span></div>
+        </div>
+        <label>제목</label>
+        <input type="text" class="article-title" value="{{ art.full_title }}">
+        <label>본문</label>
+        <textarea class="article-content">{{ art.content }}</textarea>
+        <label>정렬</label>
+        <input type="number" class="article-order" value="{{ art.order }}" />
+      </div>
+    {% empty %}
+      <div class="muted">아직 파싱된 Article이 없습니다.</div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="grid" style="margin-top:16px;">
+  <div class="card">
+    <div class="section-title">STEP E · 벡터DB 업서트</div>
+    <p class="muted">ArticleChunk 기반으로 업서트합니다. provider가 none이면 스킵됩니다.</p>
+    <button id="btn-upsert">업서트 실행</button>
+    <div id="upsert-result" class="muted" style="margin-top:8px;"></div>
+  </div>
+  <div class="card">
+    <div class="section-title">STEP E · 질문 생성</div>
+    <div class="flex">
+      <div style="flex:1;">
+        <label>조당 질문 수</label>
+        <input type="number" id="per_article" value="3" min="1" />
+      </div>
+      <div style="flex:1;">
+        <label>대상</label>
+        <select id="question_scope">
+          <option value="document">문서 전체</option>
+          <option value="article">선택 Article</option>
+        </select>
+      </div>
+    </div>
+    <button id="btn-generate-questions">질문 생성</button>
+    <div id="question-result" class="muted" style="margin-top:8px;"></div>
+    <div style="margin-top:12px;">
+      <div class="section-title">생성된 질문</div>
+      {% for q in questions %}
+        <div class="doc-row">{{ q.question_text }}</div>
+      {% empty %}
+        <div class="muted">질문이 없습니다.</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script>
+  const docId = {{ document.id }};
+  function attachPageButtons() {
+    document.querySelectorAll('.page-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const url = btn.dataset.preview;
+        const preview = document.getElementById('page-preview');
+        if (url) preview.src = url;
+      });
+    });
+  }
+  attachPageButtons();
+
+  document.getElementById('btn-refresh-pages').addEventListener('click', async () => {
+    const res = await fetch(`/api/documents/${docId}/pages/`);
+    const data = await res.json();
+    const container = document.getElementById('page-buttons');
+    container.innerHTML = '';
+    data.pages.forEach(p => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'secondary page-btn';
+      b.dataset.preview = p.preview_url;
+      b.dataset.page = p.page_number;
+      b.innerText = `p${p.page_number}`;
+      container.appendChild(b);
+    });
+    attachPageButtons();
+  });
+
+  document.getElementById('btn-parse').addEventListener('click', async () => {
+    const page_start = document.getElementById('page_start').value || 1;
+    const page_end = document.getElementById('page_end').value || page_start;
+    const mode = document.getElementById('mode').value;
+    const force_reparse = document.getElementById('force_reparse').checked;
+    const res = await fetch(`/api/documents/${docId}/parse/`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({page_start, page_end, mode, force_reparse})
+    });
+    const data = await res.json();
+    const target = document.getElementById('parse-result');
+    if (data.error) {
+      target.innerText = `에러: ${data.error}`;
+    } else {
+      target.innerText = `파싱 완료 - articles: ${data.article_count}, warnings: ${(data.warnings || []).join('; ')}`;
+      location.reload();
+    }
+  });
+
+  async function saveAllArticles() {
+    const blocks = document.querySelectorAll('.article-block');
+    for (const block of blocks) {
+      const id = block.dataset.articleId;
+      const full_title = block.querySelector('.article-title').value;
+      const content = block.querySelector('.article-content').value;
+      const order = block.querySelector('.article-order').value;
+      await fetch(`/api/articles/${id}/`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({full_title, content, order})
+      });
+    }
+  }
+
+  document.getElementById('btn-save-all').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-save-all');
+    btn.innerText = '저장 중...';
+    await saveAllArticles();
+    btn.innerText = '모든 Article 저장 완료';
+    setTimeout(() => { btn.innerText = '모든 Article 저장'; }, 1500);
+  });
+
+  document.getElementById('btn-upsert').addEventListener('click', async () => {
+    // 먼저 모든 Article 저장 후 업서트 실행
+    const target = document.getElementById('upsert-result');
+    target.innerText = 'Article 저장 후 업서트 실행 중...';
+    await saveAllArticles();
+    const res = await fetch(`/api/documents/${docId}/upsert/`, {method:'POST'});
+    const data = await res.json();
+    target.innerText = data.error ? `에러: ${data.error}` : `완료 (skipped=${data.skipped}, chunks=${data.processed_chunks||0})`;
+  });
+
+  document.getElementById('btn-generate-questions').addEventListener('click', async () => {
+    const per_article = document.getElementById('per_article').value || 3;
+    const scope = document.getElementById('question_scope').value;
+    const res = await fetch(`/api/documents/${docId}/generate-questions/`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({per_article, scope})
+    });
+    const data = await res.json();
+    const target = document.getElementById('question-result');
+    target.innerText = data.error ? `에러: ${data.error}` : `생성됨: ${data.created || 0}`;
+    if (!data.error) {
+      location.reload();
+    }
+  });
+</script>
+{% endblock %}

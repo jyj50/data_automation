@@ -1,19 +1,13 @@
-# Django 기본 패키지
-Django>=5.0.0
-Pillow>=10.0.0  # ImageField 지원을 위한 이미지 라이브러리
+# Core
+Django>=5.2.6
+pymupdf>=1.24.10
+httpx>=0.28.1
+pydantic>=2.8.2
+chromadb>=0.5.5
+sentence-transformers>=3.2.1
+whitenoise>=6.7.0
+gunicorn>=21.2.0
 
-# 텍스트 처리를 위한 패키지
-kiwipiepy>=0.18.0  # 한국어 형태소 분석기
-
-# 음성 처리를 위한 패키지 (선택사항)
-openai-whisper>=20240930  # OpenAI Whisper 음성-텍스트 변환
-torch>=2.0.0  # Whisper 모델 의존성
-torchaudio>=2.0.0  # 오디오 처리
-
-# 기타 유틸리티 패키지
-python-magic>=0.4.27  # 파일 형식 검증
-python-magic-bin>=0.4.14; sys_platform == "win32"  # Windows용 libmagic
-
-# 개발 및 테스트용 패키지 (선택사항)
+# Dev/test (optional)
 # pytest-django>=4.5.0
 # coverage>=7.0.0

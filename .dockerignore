@@ -1,0 +1,32 @@
+# VCS / tooling
+.git
+.gitignore
+.dockerignore
+.venv
+.ruff_cache
+.pytest_cache
+
+# Bytecode / build outputs
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.egg-info
+build/
+dist/
+wheels/
+
+# Local assets not needed in images
+media/
+staticfiles/
+data/
+*.log
+*.sqlite3
+db.sqlite3
+node_modules/
+
+# Editors / OS
+.DS_Store
+.idea
+.vscode

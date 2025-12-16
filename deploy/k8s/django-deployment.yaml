@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag-django
+  namespace: rag-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rag-django
+  template:
+    metadata:
+      labels:
+        app: rag-django
+    spec:
+      imagePullSecrets:
+        - name: regcred  # private 레지스트리를 쓴다면 미리 생성하세요 (없으면 삭제 가능)
+      containers:
+        - name: web
+          image: ghcr.io/your-org/data-automation:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: rag-config
+            - secretRef:
+                name: rag-secret
+          ports:
+            - containerPort: 8000
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          volumeMounts:
+            - name: media
+              mountPath: /app/media
+            - name: db
+              mountPath: /data
+      volumes:
+        - name: media
+          persistentVolumeClaim:
+            claimName: rag-media-pvc
+        - name: db
+          persistentVolumeClaim:
+            claimName: rag-db-pvc

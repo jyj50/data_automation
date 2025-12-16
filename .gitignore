@@ -1,11 +1,27 @@
-# Python-generated files
+# Python
 __pycache__/
 *.py[oc]
+*.egg-info
 build/
 dist/
 wheels/
-*.egg-info
 
-# Virtual environments
+# Environments / tooling
 .venv
+.pytest_cache
+.ruff_cache
+
+# Databases
 db.sqlite3
+*.sqlite3
+data/
+
+# Media / static artifacts
+media/
+!media/.gitkeep
+staticfiles/
+
+# OS / misc
+.DS_Store
+*.log
+node_modules/

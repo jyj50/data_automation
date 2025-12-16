@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -20,12 +21,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-l5=x=3pm5e2^@0(f4nwua_+y^6qvp9r%-^l9d5f+v@eytn$mz&'
+SECRET_KEY = os.environ.get("SECRET_KEY", "changeme-insecure-key")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "True").lower() == "true"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS_RAW = os.environ.get("ALLOWED_HOSTS", "")
+ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_RAW.split(",") if host.strip()]
+if DEBUG and not ALLOWED_HOSTS:
+    ALLOWED_HOSTS = ["*"]
+
+CSRF_TRUSTED_ORIGINS_RAW = os.environ.get("CSRF_TRUSTED_ORIGINS", "")
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in CSRF_TRUSTED_ORIGINS_RAW.split(",") if origin.strip()]
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 
 # Application definition
@@ -37,11 +45,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'multimodal',
+    'documents',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -73,10 +82,16 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+default_sqlite_path = os.environ.get("SQLITE_PATH")
+if default_sqlite_path:
+    db_name = Path(default_sqlite_path)
+else:
+    db_name = BASE_DIR / 'db.sqlite3'
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': db_name,
     }
 }
 
@@ -115,14 +130,38 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_URL = '/static/'
+STATIC_ROOT = Path(os.environ.get("STATIC_ROOT", BASE_DIR / 'staticfiles'))
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # Media files (user uploads)
-MEDIA_URL = 'media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", BASE_DIR / 'media'))
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Document processing defaults
+DOCUMENT_CHUNK_SIZE = int(os.environ.get("DOCUMENT_CHUNK_SIZE", "1000"))
+DOCUMENT_CHUNK_OVERLAP = int(os.environ.get("DOCUMENT_CHUNK_OVERLAP", "100"))
+EMBEDDING_PROVIDER = os.environ.get("EMBEDDING_PROVIDER", "none")
+VECTOR_DB_PROVIDER = os.environ.get("VECTOR_DB_PROVIDER", "chroma")
+EMBEDDING_MODEL_NAME = os.environ.get("EMBEDDING_MODEL_NAME", "BAAI/bge-m3")
+CHROMA_URL = os.environ.get("CHROMA_URL", "")
+CHROMA_COLLECTION = os.environ.get("CHROMA_COLLECTION", "documents")
+
+# LLM provider (OpenAI-compatible by default, can be set to "none")
+LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "openai_compat")
+LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "http://localhost:11434")
+LLM_MODEL = os.environ.get("LLM_MODEL", "Qwen2.5-7B-Instruct")
+LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
+LLM_TIMEOUT_SECONDS = int(os.environ.get("LLM_TIMEOUT_SECONDS", "30"))

@@ -1,178 +1,76 @@
-# 멀티모달 데이터 전처리 & 분석 자동화 플랫폼
+# PDF 문서 파싱 & RAG 준비 파이프라인 (Django 5.x)
 
-## 🚀 주요 기능
+## 주요 기능
+- PDF 업로드 → 페이지별 텍스트 추출/정리 → 페이지 미리보기 PNG → 범위 파싱(장/절/조) → Article 단위 청킹 → 선택적으로 ChromaDB 업서트 → 질문 생성 → RAG 챗.
+- 벡터 DB는 **ChromaDB(자가 호스팅)** 만 사용하며 HTTP로 연결합니다. LLM은 클러스터 외부(OpenAI 호환, 예: Qwen2.5 7B 서버)에서 호출합니다.
+- 업로드 파일·썸네일·SQLite를 PVC에 두어 파드 재시작 후에도 유지됩니다.
 
-### 📸 이미지 처리
-
-- 이미지 업로드 및 관리
-- 마우스를 이용한 직접 세그먼트 그리기
-- 객체 라벨링 (음식 종류 등)
-- 세그먼트 정보 데이터베이스 저장
-
-### 📝 텍스트 분석
-
-- 텍스트 직접 입력 또는 파일 업로드
-- Kiwi 라이브러리를 이용한 한국어 형태소 분석
-- 불용어 제거 및 키워드 추출
-- 분석 결과 시각화
-
-### 🎵 음성 변환
-
-- 음성 파일 업로드 (MP3, WAV, M4A, FLAC, OGG)
-- OpenAI Whisper 모델을 이용한 음성-텍스트 변환
-- 변환된 텍스트에서 키워드 자동 추출
-- 실시간 처리 상태 표시
-
-## 🛠️ 기술 스택
-
-- **Backend**: Django 5.0+, Python 3.10+
-- **Database**: SQLite (개발용)
-- **Frontend**: HTML5, CSS3, JavaScript
-- **AI/ML**:
-  - Kiwi (한국어 형태소 분석)
-  - OpenAI Whisper (음성-텍스트 변환)
-
-## 📋 설치 및 실행
-
-### 1. 프로젝트 클론
-
+## 로컬 실행
 ```bash
-git clone <repository-url>
-cd data_automation
-```
-
-### 2. 가상환경 설정
-
-```bash
-# uv 사용 (권장)
-uv venv -p 3.10
-uv sync
-
-# 또는 pip 사용
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-```
-
-### 3. 데이터베이스 초기화
-
-```bash
-python manage.py makemigrations
 python manage.py migrate
-```
-
-### 4. 관리자 계정 생성 (선택사항)
-
-```bash
-python manage.py createsuperuser
-```
-
-### 5. 개발 서버 실행
-
-```bash
 python manage.py runserver
 ```
+브라우저에서 http://127.0.0.1:8000/ 로 접속해 기존 UI/API 흐름을 그대로 사용하세요.
 
-웹브라우저에서 `http://localhost:8000`으로 접속하여 플랫폼을 이용할 수 있습니다.
+## 컨테이너
+- 빌드: `docker build -t <registry>/data-automation:latest .`
+- 푸시: `docker push <registry>/data-automation:latest`
+- 로컬 실행(미디어/DB 유지):
+  `docker run -p 8000:8000 -v $(pwd)/media:/app/media -v $(pwd)/data:/data --env-file <env> <registry>/data-automation:latest`
 
-## 📁 프로젝트 구조
+## Kubernetes 배포(deploy/k8s)
+아래 순서로 적용:
+1) `namespace.yaml`, `configmap.yaml`, `secret.yaml`
+2) `pvc-db.yaml`, `pvc-media.yaml`
+3) `chroma.yaml`
+4) `django-deployment.yaml`, `django-service.yaml`
+5) `ingress.yaml`
 
-```
-data_automation/
-├── config/                 # Django 프로젝트 설정
-│   ├── settings.py
-│   ├── urls.py
-│   └── wsgi.py
-├── multimodal/            # 메인 앱
-│   ├── models.py          # 데이터 모델
-│   ├── views.py           # 뷰 함수
-│   ├── urls.py            # URL 라우팅
-│   ├── utils.py           # 유틸리티 함수
-│   ├── admin.py           # 관리자 페이지 설정
-│   ├── migrations/        # 데이터베이스 마이그레이션
-│   └── templates/         # HTML 템플릿
-│       └── multimodal/
-│           ├── base.html
-│           ├── home.html
-│           ├── image_tab.html
-│           ├── image_detail.html
-│           ├── text_tab.html
-│           ├── text_result.html
-│           ├── audio_tab.html
-│           └── audio_detail.html
-├── media/                 # 업로드된 파일 저장
-├── staticfiles/           # 정적 파일 (배포용)
-├── requirements.txt       # Python 패키지 의존성
-├── manage.py             # Django 관리 스크립트
-└── README.md
-```
+참고:
+- Django는 `/app/media`(업로드/미리보기)와 `/data/db.sqlite3`(선택) 를 PVC에 마운트합니다.
+- Chroma StatefulSet은 `/chroma/data` 에 PVC를 연결하며 `http://chroma.rag-app.svc.cluster.local:8000` 으로 접근합니다.
+- Ingress 호스트 `rag.example.com` 은 예시입니다. 실제 도메인에 맞춰 `ALLOWED_HOSTS`/`CSRF_TRUSTED_ORIGINS` 를 설정하세요. Ingress가 없으면 NodePort로 대체 가능합니다.
+- `storageClassName` 이 다르면 클러스터 기본값에 맞춰 수정하세요.
 
-## 💡 사용 방법
+## 환경변수
+| 변수 | 로컬 기본값 | K8s 예시 |
+| --- | --- | --- |
+| SECRET_KEY | 개발용 문자열 | `rag-secret`에서 주입 |
+| DEBUG | true | false |
+| ALLOWED_HOSTS | *(DEBUG 시) | `rag.example.com` |
+| CSRF_TRUSTED_ORIGINS | 빈 값 | `https://rag.example.com` |
+| MEDIA_ROOT | `./media` | `/app/media` (PVC) |
+| STATIC_ROOT | `./staticfiles` | `/app/staticfiles` |
+| SQLITE_PATH | `./db.sqlite3` | `/data/db.sqlite3` (PVC) |
+| DOCUMENT_CHUNK_SIZE / DOCUMENT_CHUNK_OVERLAP | 1000 / 100 | 동일 |
+| EMBEDDING_PROVIDER | `none` (벡터 생략) | 임베딩 모델 준비 시 변경 |
+| EMBEDDING_MODEL_NAME | `BAAI/bge-m3` | 동일 |
+| VECTOR_DB_PROVIDER | `chroma` | `chroma` |
+| CHROMA_URL / CHROMA_COLLECTION | 빈 값(폴백 검색) | `http://chroma.rag-app.svc.cluster.local:8000` / `documents` |
+| LLM_PROVIDER | `openai_compat` | `openai_compat` 또는 `none` |
+| LLM_BASE_URL | `http://localhost:11434` | 외부 LLM 엔드포인트 |
+| LLM_MODEL / LLM_TIMEOUT_SECONDS | `Qwen2.5-7B-Instruct` / `30` | 동일 |
 
-### 이미지 처리
+## 스모크 테스트(배포 후)
+1. PDF 업로드
+2. 페이지 미리보기 확인
+3. 파싱 실행 → Article 목록 생성 확인
+4. Chroma 업서트 → 상태 완료, 오류 없음 확인
+5. `/api/chat/` 질의 시 Chroma 기반 응답(LLM off이면 regex/DB 폴백 응답)
+6. 파드 재시작 후에도 업로드/미리보기가 유지되는지 확인(PVC)
 
-1. "이미지" 탭 클릭
-2. 제목 입력 후 이미지 파일 업로드
-3. 업로드된 이미지 클릭하여 상세 페이지 이동
-4. 마우스로 객체 주위에 세그먼트 그리기
-5. 객체 라벨 (음식 종류) 입력 후 저장
+## API (변경 없음)
+- `POST /api/documents/upload/` (multipart `file=@sample.pdf`)
+- `GET /api/documents/<id>/pages/`
+- `GET /api/documents/<id>/pages/<page>/preview/`
+- `POST /api/documents/<id>/parse/` `{page_start, page_end, mode, force_reparse}`
+- `PUT /api/articles/<id>/`
+- `POST /api/documents/<id>/upsert/`
+- `POST /api/documents/<id>/generate-questions/` `{per_article, scope, article_ids}`
+- `GET /chat/`, `POST /api/chat/` `{query, top_k}`
 
-### 텍스트 분석
-
-1. "텍스트" 탭 클릭
-2. 텍스트 직접 입력 또는 txt 파일 업로드
-3. 분석 결과 확인 (형태소, 키워드, 처리된 텍스트)
-
-### 음성 변환
-
-1. "음성" 탭 클릭
-2. 음성 파일 업로드
-3. 자동 변환 처리 대기
-4. 변환된 텍스트 및 키워드 확인
-
-## 🔧 설정 정보
-
-### 지원 파일 형식
-
-- **이미지**: JPG, JPEG, PNG, GIF, BMP (최대 10MB)
-- **텍스트**: TXT 파일 (UTF-8 인코딩)
-- **음성**: MP3, WAV, M4A, FLAC, OGG (최대 50MB)
-
-### 데이터베이스 모델
-
-- `ImageData`: 이미지 정보
-- `ImageSegment`: 세그먼트 좌표 및 라벨
-- `TextData`: 텍스트 분석 결과
-- `AudioData`: 음성 변환 결과
-- `ProcessingLog`: 처리 로그
-
-## 📝 개발 참고사항
-
-### 확장 가능성
-
-- 추가 AI 모델 연동 (YOLO, BERT 등)
-- 데이터 시각화 라이브러리 연동
-- RESTful API 구현
-- 사용자 인증 시스템
-- 배치 처리 시스템
-
-### 라이브러리 설치 주의사항
-
+## 테스트
 ```bash
-# Kiwi 설치 (한국어 형태소 분석)
-pip install kiwipiepy
-
-# Whisper 설치 (음성 변환)
-pip install openai-whisper torch torchaudio
-
-# Windows에서 추가 설치 필요
-pip install python-magic-bin
+python manage.py test documents
 ```
-
-## 🎯 주요 특징
-
-1. **직관적인 UI/UX**: 최소한의 디자인으로 기능에 집중
-2. **실시간 처리**: 업로드와 동시에 자동 처리
-3. **다국어 지원**: 한국어 최적화
-4. **확장 가능한 구조**: 모듈화된 코드 구조
-5. **데이터 영속성**: SQLite를 통한 결과 저장

@@ -1,0 +1,63 @@
+{% extends "documents/base.html" %}
+{% block content %}
+<div class="card" style="margin-bottom:16px;">
+  <div class="section-title">관리 상세</div>
+  <h2>{{ document.original_filename }} (ID {{ document.id }})</h2>
+  <div class="flex">
+    <span class="pill status-{{ document.status }}">ingest: {{ document.status }}</span>
+    <span class="pill status-{{ document.parse_status }}">parse: {{ document.parse_status }}</span>
+    <span class="pill status-{{ document.upsert_status }}">upsert: {{ document.upsert_status }}</span>
+    <span class="pill status-{{ document.question_gen_status }}">Q: {{ document.question_gen_status }}</span>
+  </div>
+  <p class="muted">페이지 {{ document.page_count }} · 생성 {{ document.created_at|date:"Y-m-d H:i" }}</p>
+  <a href="{% url 'documents:manage_documents' %}" style="color:var(--accent);text-decoration:none;font-weight:600;">← 목록</a>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <div class="section-title">페이지 미리보기</div>
+    <div style="max-height:400px; overflow:auto;">
+      {% for page in document.pages.all %}
+        <div class="doc-row">
+          <div class="muted">p{{ page.page_number }}</div>
+          <div style="white-space:pre-wrap;">{{ page.text_clean|default:"(내용 없음)" }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="card">
+    <div class="section-title">Articles</div>
+    {% for art in articles %}
+      <div class="doc-row">
+        <div><strong>{{ art.article_key }}</strong> · {{ art.full_title }}</div>
+        <div class="muted">pages: {{ art.source_pages }}</div>
+        <div style="white-space:pre-wrap;">{{ art.content }}</div>
+      </div>
+    {% empty %}
+      <div class="muted">없음</div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="grid" style="margin-top:16px;">
+  <div class="card">
+    <div class="section-title">Article Chunks</div>
+    {% for chunk in chunks %}
+      <div class="doc-row">
+        <div class="muted">{{ chunk.article.article_key }} · chunk {{ chunk.chunk_index }}</div>
+        <div style="white-space:pre-wrap;">{{ chunk.chunk_text }}</div>
+      </div>
+    {% empty %}
+      <div class="muted">없음</div>
+    {% endfor %}
+  </div>
+  <div class="card">
+    <div class="section-title">Generated Questions</div>
+    {% for q in questions %}
+      <div class="doc-row">{{ q.question_text }}</div>
+    {% empty %}
+      <div class="muted">없음</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
