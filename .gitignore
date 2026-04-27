@@ -25,3 +25,21 @@ staticfiles/
 .DS_Store
 *.log
 node_modules/
+
+# Secrets — NEVER commit real env files
+.env
+.env.local
+.env.*.local
+
+# Next.js build output
+frontend/.next/
+frontend/out/
+
+# Docker
+*.env.override
+
+# Claude Code local settings (contains tool permissions)
+.claude/settings.local.json
+
+# uv lock (only needed if using uv as package manager)
+uv.lock

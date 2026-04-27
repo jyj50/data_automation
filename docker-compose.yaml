@@ -1,0 +1,61 @@
+services:
+
+  # ── FastAPI backend ────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app          # hot reload: mount source
+      - media_data:/app/media
+      - db_data:/data
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: "sqlite:////data/db.sqlite3"
+      MEDIA_ROOT: "/app/media"
+      CHROMA_URL: "http://chroma:8000"  # internal docker network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      - chroma
+    restart: unless-stopped
+
+  # ── Next.js frontend ───────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: dev                        # dev stage for hot reload
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend/src:/app/src          # hot reload: mount source
+      - ./frontend/public:/app/public
+    env_file:
+      - .env
+    environment:
+      NEXT_PUBLIC_API_URL: "http://localhost:8000"
+      WATCHPACK_POLLING: "true"          # needed for file change detection in Docker
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # ── ChromaDB vector store ──────────────────────────────────────────────────────
+  chroma:
+    image: chromadb/chroma:0.6.3   # pinned to match chromadb Python client 0.6.x
+    ports:
+      - "8001:8000"                      # host:8001 → container:8000
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      IS_PERSISTENT: "TRUE"
+      PERSIST_DIRECTORY: "/chroma/chroma"
+      ANONYMIZED_TELEMETRY: "FALSE"
+    restart: unless-stopped
+
+volumes:
+  media_data:
+  db_data:
+  chroma_data:

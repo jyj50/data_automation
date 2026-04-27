@@ -4,23 +4,40 @@ metadata:
   name: rag-ingress
   namespace: rag-app
   annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
-    traefik.ingress.kubernetes.io/router.tls: "true"
-    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    # NGINX Ingress Controller annotations (unified — Traefik annotations removed)
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"        # increase if uploading large PDFs
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"     # allow long parse/upsert requests
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
 spec:
-  ingressClassName: traefik
+  ingressClassName: nginx  # TODO: verify your cluster's IngressClass name (`kubectl get ingressclass`)
   rules:
-    - host: rag.example.com
+    - host: rag.example.com  # TODO: replace with your actual domain
       http:
         paths:
+          # Frontend (Next.js) handles all non-API routes
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: rag-django
+                name: rag-frontend   # TODO: create frontend Service (port 3000)
+                port:
+                  number: 3000
+          # Backend (FastAPI) handles /api/* and /media/*
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: rag-backend
+                port:
+                  number: 8000
+          - path: /media
+            pathType: Prefix
+            backend:
+              service:
+                name: rag-backend
                 port:
                   number: 8000
   tls:
     - hosts:
-        - rag.example.com
-      secretName: rag-tls
+        - rag.example.com  # TODO: replace with your actual domain
+      secretName: rag-tls  # TODO: create with cert-manager or `kubectl create secret tls rag-tls --cert=... --key=...`

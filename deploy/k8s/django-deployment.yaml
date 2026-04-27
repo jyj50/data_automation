@@ -1,23 +1,24 @@
+# NOTE: renamed from Django to FastAPI backend — update image and service references accordingly
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rag-django
+  name: rag-backend          # TODO: rename service/selector references from rag-django to rag-backend
   namespace: rag-app
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: rag-django
+      app: rag-backend
   template:
     metadata:
       labels:
-        app: rag-django
+        app: rag-backend
     spec:
       imagePullSecrets:
-        - name: regcred  # private 레지스트리를 쓴다면 미리 생성하세요 (없으면 삭제 가능)
+        - name: regcred      # TODO: create with `kubectl create secret docker-registry regcred ...` or remove if using public registry
       containers:
         - name: web
-          image: ghcr.io/your-org/data-automation:latest
+          image: ghcr.io/your-org/data-automation-backend:latest  # TODO: replace with your actual image registry/name
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
@@ -47,7 +48,7 @@ spec:
               memory: 512Mi
             limits:
               cpu: "1"
-              memory: 1Gi
+              memory: 1Gi          # TODO: increase if loading sentence-transformers model
           volumeMounts:
             - name: media
               mountPath: /app/media

@@ -1,0 +1,26 @@
+# Web framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+python-multipart>=0.0.9
+
+# Database (SQLite default; add psycopg2-binary for PostgreSQL)
+sqlalchemy>=2.0.0
+
+# Settings
+pydantic-settings>=2.3.0
+
+# PDF processing
+PyMuPDF>=1.24.10
+
+# HTTP client (LLM calls)
+httpx>=0.28.1
+
+# Pydantic (included via fastapi, pinned for compatibility)
+pydantic>=2.8.2
+
+# Vector DB client — must match server major version
+# chromadb/chroma:latest is currently 0.6.x which requires the v2 API
+chromadb>=0.6.0,<0.7.0
+
+# Embeddings (optional; comment out if EMBEDDING_PROVIDER=none)
+sentence-transformers>=3.2.1

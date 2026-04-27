@@ -29,25 +29,21 @@ spec:
     spec:
       containers:
         - name: chroma
-          image: ghcr.io/chroma-core/chroma:0.5.5
+          image: chromadb/chroma:latest  # TODO: pin to a specific version tag in production (e.g. chromadb/chroma:0.5.5)
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
               name: http
           env:
-            - name: CHROMA_SERVER_HOST
-              value: "0.0.0.0"
-            - name: CHROMA_SERVER_HTTP_PORT
-              value: "8000"
-            - name: CHROMA_DB_IMPL
-              value: "duckdb+parquet"
+            - name: IS_PERSISTENT
+              value: "TRUE"
             - name: PERSIST_DIRECTORY
-              value: "/chroma/data"
+              value: "/chroma/chroma"
             - name: ANONYMIZED_TELEMETRY
-              value: "False"
+              value: "FALSE"
           volumeMounts:
             - name: chroma-data
-              mountPath: /chroma/data
+              mountPath: /chroma/chroma
           readinessProbe:
             httpGet:
               path: /api/v1/heartbeat
@@ -74,7 +70,7 @@ spec:
         name: chroma-data
       spec:
         accessModes: ["ReadWriteOnce"]
+        storageClassName: local-path  # TODO: replace with your cluster's StorageClass (`kubectl get storageclass`)
         resources:
           requests:
-            storage: 10Gi
-        storageClassName: local-path
+            storage: 10Gi             # TODO: adjust based on expected vector data size

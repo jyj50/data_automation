@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(python manage.py startapp:*)",
-      "Bash(python manage.py:*)"
+      "Bash(python manage.py:*)",
+      "Bash(grep -E \"\\\\.\\(py|txt|md|yml|yaml|json|ini|cfg|toml\\)$\")",
+      "Bash(del \"c:\\\\Users\\\\wjddu\\\\Desktop\\\\정영재\\\\side_project\\(jyj\\)\\\\data_automation\\\\data_automation\\\\frontend\\\\next.config.ts\")"
     ],
     "deny": [],
     "ask": []

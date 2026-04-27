@@ -5,19 +5,18 @@ metadata:
   namespace: rag-app
 data:
   DEBUG: "false"
-  ALLOWED_HOSTS: "rag.example.com"
-  CSRF_TRUSTED_ORIGINS: "https://rag.example.com"
+  ALLOWED_HOSTS: "rag.example.com"              # TODO: replace with your actual domain
   MEDIA_ROOT: "/app/media"
-  STATIC_ROOT: "/app/staticfiles"
-  SQLITE_PATH: "/data/db.sqlite3"
+  DATABASE_URL: "sqlite:////data/db.sqlite3"    # TODO: replace with PostgreSQL URL for production
   DOCUMENT_CHUNK_SIZE: "1000"
   DOCUMENT_CHUNK_OVERLAP: "100"
-  EMBEDDING_PROVIDER: "none"
+  EMBEDDING_PROVIDER: "none"                    # TODO: set to "sentence_transformer" when embedding model is ready
   EMBEDDING_MODEL_NAME: "BAAI/bge-m3"
   VECTOR_DB_PROVIDER: "chroma"
   CHROMA_URL: "http://chroma.rag-app.svc.cluster.local:8000"
   CHROMA_COLLECTION: "documents"
   LLM_PROVIDER: "openai_compat"
-  LLM_BASE_URL: "http://external-llm.example.com"
-  LLM_MODEL: "Qwen2.5-7B-Instruct"
+  LLM_BASE_URL: "http://external-llm.example.com"  # TODO: replace with actual LLM endpoint
+  LLM_MODEL: "exaone3.5:7.8b-instruct-q4_K_M"      # EXAONE 3.5 7.8B 4-bit — Ollama tag 확인 후 수정
   LLM_TIMEOUT_SECONDS: "30"
+  CORS_ORIGINS: "https://rag.example.com"           # TODO: replace with your actual frontend origin

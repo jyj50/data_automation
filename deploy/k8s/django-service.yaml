@@ -1,11 +1,12 @@
+# NOTE: selector updated from rag-django → rag-backend to match deployment label
 apiVersion: v1
 kind: Service
 metadata:
-  name: rag-django
+  name: rag-backend          # TODO: update Ingress backend.service.name to rag-backend
   namespace: rag-app
 spec:
   selector:
-    app: rag-django
+    app: rag-backend
   ports:
     - name: http
       port: 8000
